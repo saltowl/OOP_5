@@ -5,6 +5,7 @@ using namespace std;
 
 Factorization::Factorization(uint64_t& number)
 {
+	source = number;
 	for (auto i = 2; i <= sqrt(number); i++)
 	{
 		while (number % i == 0)
@@ -18,7 +19,7 @@ Factorization::Factorization(uint64_t& number)
 		factors[number]++;
 }
 
-uint64_t Factorization::Check() const
+bool Factorization::Check() const
 {
 	uint64_t result = 1;
 	for (auto& obj : this->factors)
@@ -26,7 +27,7 @@ uint64_t Factorization::Check() const
 		for (auto i = 0; i < obj.second; i++)
 			result *= obj.first;
 	}
-	return result;
+	return result == source;
 }
 
 string Factorization::Description() const
