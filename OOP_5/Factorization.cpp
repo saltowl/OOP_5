@@ -3,9 +3,11 @@
 
 using namespace std;
 
-Factorization::Factorization(uint64_t& number)
+Factorization::Factorization(uint64_t& number) : source(number) {}
+
+void Factorization::Calculation()
 {
-	source = number;
+	uint64_t number = source;
 	for (auto i = 2; i <= sqrt(number); i++)
 	{
 		while (number % i == 0)

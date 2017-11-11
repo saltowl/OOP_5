@@ -9,6 +9,8 @@ public:
 	Factorization(uint64_t& number);
 	~Factorization() = default;
 
+	void Calculation();
+
 	bool Check()			  const;
 	std::string Description() const;
 
