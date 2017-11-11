@@ -34,7 +34,7 @@ bool Factorization::Check() const
 
 string Factorization::Description() const
 {
-	string toReturn;
+	string toReturn = to_string(source) + ' ';
 	for (auto& obj : this->factors)
 	{
 		for (auto i = 0; i < obj.second; i++)
