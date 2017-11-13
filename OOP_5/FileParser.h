@@ -14,12 +14,12 @@ public:
 	~FileParser() = default;
 
 private:
-	const uint16_t queueSize = 10;
+	const uint16_t queueSize = 5;
 	const std::string inFile, outFile;
 
 	bool stop = 0;
-	std::recursive_mutex m;
-	std::queue<Factorization> objs;
+	std::mutex m, m1;
+	std::queue<Factorization> task, res;
 
 	void WorkWithFiles();
 	void Calculation();
