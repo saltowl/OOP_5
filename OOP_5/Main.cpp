@@ -12,6 +12,7 @@ int main(int argc, char* argv[])
 	try
 	{
 		FileParser f(input, output);
+		f.Work();
 	}
 	catch (ProgramException& e)
 	{

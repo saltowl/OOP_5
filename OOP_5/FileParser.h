@@ -13,6 +13,8 @@ public:
 	FileParser(const std::string& in, const std::string& out);
 	~FileParser() = default;
 
+	void Work();
+
 private:
 	const uint16_t queueSize = 5;
 	const std::string inFile, outFile;
@@ -21,7 +23,6 @@ private:
 	std::mutex m, m1;
 	std::queue<Factorization> task, res;
 
-	void WorkWithFiles();
 	void Calculation();
 	void WriteFile(std::ofstream &ofs);
 	void ReadFile(std::ifstream &ifs);
