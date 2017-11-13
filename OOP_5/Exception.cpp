@@ -10,3 +10,5 @@ const char* ProgramException::what() const noexcept
 WrongAnswer::WrongAnswer(const std::string& message) noexcept : ProgramException(message) {}
 
 IOException::IOException(const std::string& message) noexcept : ProgramException(message) {}
+
+NotJoinable::NotJoinable(const std::string& message) noexcept : ProgramException(message) {}

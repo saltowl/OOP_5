@@ -24,3 +24,9 @@ class IOException : public ProgramException
 public:
 	IOException(const std::string& message) noexcept;
 };
+
+class NotJoinable : public ProgramException
+{
+public:
+	NotJoinable(const std::string& message) noexcept;
+};
