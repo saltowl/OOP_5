@@ -20,7 +20,7 @@ private:
 	const std::string inFile, outFile;
 
 	bool stop = 0;
-	std::mutex m, m1;
+	std::mutex mut;
 	std::queue<Factorization> task, res;
 
 	void Calculation();

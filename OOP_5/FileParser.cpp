@@ -6,12 +6,11 @@ FileParser::FileParser(const string& in, const string& out) : inFile(in), outFil
 
 void FileParser::Calculation()
 {
-	while (stop == 0)
+	while (!stop)
 	{
-		lock_guard<mutex> lck(this->m);
+		lock_guard<mutex> lck(mut);
 		if (!task.empty())
 		{
-			cout << "Calc\n";
 			task.front().Calculation();
 			if (!task.front().Check())
 				throw WrongAnswer("The result of multiplication of prime divisors is not equal to the original value\n");
@@ -40,41 +39,48 @@ void FileParser::Work()
 
 	thread calc(&FileParser::Calculation, this);
 
-	while (true)
+	while (!stop)
 	{
-		cout << stop << '\n';
-
 		if (!ifs.good() && task.empty() && res.empty())
-		{
-			stop = 1;
-			break;
-		}	
+			stop = 1;	
 
 		if (ifs.good() && task.size() != queueSize)
-			ReadFile(ifs);
+			ReadFile(ifs);			
 		
 		if (ofs.good() && !res.empty())
-			WriteFile(ofs);
+			WriteFile(ofs);			
 	}
+
 	if (calc.joinable()) calc.join();
-	else cout << "Error\n";
+	else throw NotJoinable("The calculation thread is not joinable\n");
+
 	ifs.close();
 	ofs.close();
 }
 
 void FileParser::WriteFile(ofstream &ofs)
 {
-	lock_guard<mutex> lck(this->m);
-	cout << "Write\n";
-	ofs.write(res.front().Description().c_str(), res.front().Description().length());
-	res.pop();
+	lock_guard<mutex> lck(mut);
+
+	if (ofs.good())
+	{
+		ofs.write(res.front().Description().c_str(), res.front().Description().length());
+		res.pop();
+	}
+	else 
+		throw IOException(outFile + " is damaged in the process of writing\n");
 }
 
 void FileParser::ReadFile(ifstream &ifs)
 {
-	lock_guard<mutex> lck(this->m);
-	cout << "Read\n";
-	uint64_t obj;
-	ifs >> obj;
-	task.push(obj);
+	lock_guard<mutex> lck(mut);
+
+	if (ifs.good())
+	{
+		uint64_t obj;
+		ifs >> obj;
+		task.push(obj);
+	}
+	else 
+		throw IOException(inFile + " is damaged in the process of reading\n");
 }
