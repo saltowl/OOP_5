@@ -16,7 +16,8 @@ public:
 	void Work();
 
 private:
-	const uint16_t queueSize = 5;
+	const uint16_t minQueueSize = 50;
+	const uint16_t maxQueueSize = 5;
 	const std::string inFile, outFile;
 
 	bool stop = 0;

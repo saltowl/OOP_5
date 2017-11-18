@@ -3,9 +3,9 @@
 using namespace std;
 
 // TODO: add minQueueSize, maxQueueSize
+// TODO: read a whole queue at once
 // TODO: use condition_variable
 // TODO: add 2 thread to read and to write
-// TODO: use unique_lock
 // TODO: add pause and resume
 
 FileParser::FileParser(const string& in, const string& out) : inFile(in), outFile(out) {}
@@ -14,13 +14,18 @@ void FileParser::Calculation()
 {
 	while (!stop)
 	{
-		lock_guard<mutex> lck(mut);
+		unique_lock<mutex> lck(mut);
 		if (!tasks.empty())
 		{
-			tasks.front().Calculation();
-			if (!tasks.front().Check())
+			Factorization &curFact = tasks.front();
+			lck.unlock();
+
+			curFact.Calculation();
+			if (!curFact.Check())
 				throw WrongAnswer("The result of multiplication of prime divisors is not equal to the original value\n");
-			results.push(tasks.front());
+
+			lck.lock();
+			results.push(curFact);
 			tasks.pop();
 		}
 	}
@@ -44,13 +49,15 @@ void FileParser::Work()
 	}
 
 	thread calc(&FileParser::Calculation, this);
+	/*thread read(&FileParser::ReadFile, this, ifs);
+	thread write(&FileParser::WriteFile, this, ofs);*/
 
 	while (!stop)
 	{
 		if (!ifs.good() && tasks.empty() && results.empty())
 			stop = 1;	
 
-		if (ifs.good() && tasks.size() != queueSize)
+		if (ifs.good() && tasks.size() < maxQueueSize)
 			ReadFile(ifs);			
 		
 		if (ofs.good() && !results.empty())
@@ -59,6 +66,12 @@ void FileParser::Work()
 
 	if (calc.joinable()) calc.join();
 	else throw NotJoinable("The calculation thread is not joinable\n");
+
+	/*if (read.joinable()) read.join();
+	else throw NotJoinable("The ReadFile thread is not joinable\n");
+
+	if (write.joinable()) write.join();
+	else throw NotJoinable("The WriteFile thread is not joinable\n");*/
 }
 
 void FileParser::WriteFile(ofstream &ofs)
