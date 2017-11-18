@@ -21,7 +21,7 @@ private:
 
 	bool stop = 0;
 	std::mutex mut;
-	std::queue<Factorization> task, res;
+	std::queue<Factorization> tasks, results;
 
 	void Calculation();
 	void WriteFile(std::ofstream &ofs);
