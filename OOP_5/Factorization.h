@@ -11,7 +11,7 @@ public:
 
 	void Calculation();
 
-	bool Check()			  const;
+	bool Check()              const;
 	std::string Description() const;
 
 private:
