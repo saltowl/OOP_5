@@ -3,6 +3,8 @@
 
 using namespace std;
 
+// TODO: Check() renamed and add real Check()
+
 Factorization::Factorization(uint64_t& number) : source(number) {}
 
 void Factorization::Calculation()
