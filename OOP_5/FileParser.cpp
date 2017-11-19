@@ -2,10 +2,7 @@
 
 using namespace std;
 
-// TODO: add minQueueSize, maxQueueSize
-// TODO: read a whole queue at once
 // TODO: use condition_variable
-// TODO: add 2 thread to read and to write
 // TODO: add pause and resume
 
 FileParser::FileParser(const string& in, const string& out) : inFile(in), outFile(out) {}
@@ -15,32 +12,46 @@ void FileParser::Calculation()
 	while (!stop)
 	{
 		unique_lock<mutex> lck(mut);
+		//clog << "cccc\n";
 		if (!tasks.empty())
 		{
-			Factorization &curFact = tasks.front();
-			lck.unlock();
+			while (!tasks.empty())
+			{
+				Factorization &curFact = tasks.front();
+				lck.unlock();
 
-			curFact.Calculation();
-			if (!curFact.Check())
-				throw WrongAnswer("The result of multiplication of prime divisors is not equal to the original value\n");
+				//clog << "Calculation\n";
+				curFact.Calculation();
+				if (!curFact.Check())
+					throw WrongAnswer("The result of multiplication of prime divisors is not equal to the original value\n");
 
-			lck.lock();
-			results.push(curFact);
-			tasks.pop();
+				lck.lock();
+				results.push(curFact);
+				tasks.pop();
+			}
 		}
 	}
 }
 
 void FileParser::Work()
 {
-	ifstream ifs(inFile);
-	ofstream ofs(outFile);
+	thread readFile(&FileParser::ReadFile, this);
+	thread calc(&FileParser::Calculation, this);
+	thread writeFile(&FileParser::WriteFile, this);
 
-	if (!ifs.good())
-	{
-		stop = 1;
-		throw IOException("IO error in " + inFile + '\n');
-	}
+	if (calc.joinable()) calc.join();
+	else throw NotJoinable("The calculation thread is not joinable\n");
+
+	if (readFile.joinable()) readFile.join();
+	else throw NotJoinable("The ReadFile thread is not joinable\n");
+
+	if (writeFile.joinable()) writeFile.join();
+	else throw NotJoinable("The WriteFile thread is not joinable\n");
+}
+
+void FileParser::WriteFile()
+{
+	ofstream ofs(outFile);
 
 	if (!ofs.good())
 	{
@@ -48,55 +59,58 @@ void FileParser::Work()
 		throw IOException("IO error in " + outFile + '\n');
 	}
 
-	thread calc(&FileParser::Calculation, this);
-	/*thread read(&FileParser::ReadFile, this, ifs);
-	thread write(&FileParser::WriteFile, this, ofs);*/
-
 	while (!stop)
 	{
-		if (!ifs.good() && tasks.empty() && results.empty())
-			stop = 1;	
+		if (!ofs.good())
+		{
+			stop = 1;
+			throw IOException(outFile + " is damaged in the process of writing\n");;
+		}
 
-		if (ifs.good() && tasks.size() < maxQueueSize)
-			ReadFile(ifs);			
-		
+		lock_guard<mutex> lck(mut);
+
+		//clog << "Write\n";
 		if (ofs.good() && !results.empty())
-			WriteFile(ofs);			
+		{
+			ofs.write(results.front().Description().c_str(), results.front().Description().length());
+			results.pop();
+		}
 	}
-
-	if (calc.joinable()) calc.join();
-	else throw NotJoinable("The calculation thread is not joinable\n");
-
-	/*if (read.joinable()) read.join();
-	else throw NotJoinable("The ReadFile thread is not joinable\n");
-
-	if (write.joinable()) write.join();
-	else throw NotJoinable("The WriteFile thread is not joinable\n");*/
 }
 
-void FileParser::WriteFile(ofstream &ofs)
+void FileParser::ReadFile()
 {
-	lock_guard<mutex> lck(mut);
+	ifstream ifs(inFile);
 
-	if (ofs.good())
+	if (!ifs.good())
 	{
-		ofs.write(results.front().Description().c_str(), results.front().Description().length());
-		results.pop();
+		stop = 1;
+		throw IOException("IO error in " + inFile + '\n');
 	}
-	else 
-		throw IOException(outFile + " is damaged in the process of writing\n");
-}
-
-void FileParser::ReadFile(ifstream &ifs)
-{
-	lock_guard<mutex> lck(mut);
-
-	if (ifs.good())
+	
+	while (!stop)
 	{
-		uint64_t obj;
-		ifs >> obj;
-		tasks.push(obj);
+		if (!ifs.good() && !ifs.eof())
+		{
+			stop = 1;
+			throw IOException(inFile + " is damaged in the process of reading\n");
+		}
+
+		lock_guard<mutex> lck(mut);
+
+		//clog << "Read\n";
+		if (tasks.size() < minQueueSize)
+		{
+			if (!ifs.good() && tasks.empty() && results.empty())
+				stop = 1;
+
+			while (ifs.good() && tasks.size() < maxQueueSize)
+			{
+				//clog << "...\n";
+				uint64_t obj;
+				ifs >> obj;
+				tasks.push(obj);
+			}
+		}
 	}
-	else 
-		throw IOException(inFile + " is damaged in the process of reading\n");
 }

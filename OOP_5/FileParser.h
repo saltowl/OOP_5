@@ -16,7 +16,7 @@ public:
 	void Work();
 
 private:
-	const uint16_t minQueueSize = 50;
+	const uint16_t minQueueSize = 2;
 	const uint16_t maxQueueSize = 5;
 	const std::string inFile, outFile;
 
@@ -25,6 +25,6 @@ private:
 	std::queue<Factorization> tasks, results;
 
 	void Calculation();
-	void WriteFile(std::ofstream &ofs);
-	void ReadFile(std::ifstream &ifs);
+	void WriteFile();
+	void ReadFile();
 };
