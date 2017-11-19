@@ -12,7 +12,10 @@ void FileParser::Calculation()
 	while (!stop)
 	{
 		unique_lock<mutex> lck(mut);
-		//clog << "cccc\n";
+
+		while (!notified) // loop to avoid spurious wakeups
+			check.wait(lck);
+
 		if (!tasks.empty())
 		{
 			while (!tasks.empty())
@@ -30,6 +33,7 @@ void FileParser::Calculation()
 				tasks.pop();
 			}
 		}
+		notified = 0;
 	}
 }
 
@@ -64,16 +68,20 @@ void FileParser::WriteFile()
 		if (!ofs.good())
 		{
 			stop = 1;
-			throw IOException(outFile + " is damaged in the process of writing\n");;
+			throw IOException(outFile + " is damaged in the process of writing\n");
 		}
 
-		lock_guard<mutex> lck(mut);
-
-		//clog << "Write\n";
-		if (ofs.good() && !results.empty())
+		while (!results.empty())
 		{
-			ofs.write(results.front().Description().c_str(), results.front().Description().length());
-			results.pop();
+			unique_lock<mutex> lck(mut);
+
+			//clog << "Write\n";
+			if (ofs.good())
+			{
+				ofs.write(results.front().Description().c_str(), results.front().Description().length());
+				results.pop();
+			}
+			else throw IOException(outFile + " is damaged in the process of writing\n");
 		}
 	}
 }
@@ -96,7 +104,7 @@ void FileParser::ReadFile()
 			throw IOException(inFile + " is damaged in the process of reading\n");
 		}
 
-		lock_guard<mutex> lck(mut);
+		unique_lock<mutex> lck(mut);
 
 		//clog << "Read\n";
 		if (tasks.size() < minQueueSize)
@@ -106,11 +114,13 @@ void FileParser::ReadFile()
 
 			while (ifs.good() && tasks.size() < maxQueueSize)
 			{
-				//clog << "...\n";
 				uint64_t obj;
 				ifs >> obj;
 				tasks.push(obj);
 			}
+
+			notified = 1;
+			check.notify_one();
 		}
 	}
 }

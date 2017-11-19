@@ -6,6 +6,7 @@
 #include <iostream>
 #include <mutex>
 #include <thread>
+#include <condition_variable>
 
 class FileParser
 {
@@ -21,6 +22,8 @@ private:
 	const std::string inFile, outFile;
 
 	bool stop = 0;
+	bool notified;
+	std::condition_variable check;
 	std::mutex mut;
 	std::queue<Factorization> tasks, results;
 
