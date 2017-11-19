@@ -22,7 +22,7 @@ void FileParser::Calculation()
 
 				//clog << "Calculation\n";
 				curFact.Calculation();
-				if (!curFact.Check())
+				if (!curFact.IsRight())
 					throw WrongAnswer("The result of multiplication of prime divisors is not equal to the original value\n");
 
 				lck.lock();

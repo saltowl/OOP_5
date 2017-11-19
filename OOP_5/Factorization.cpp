@@ -3,8 +3,6 @@
 
 using namespace std;
 
-// TODO: Check() renamed and add real Check()
-
 Factorization::Factorization(uint64_t& number) : source(number) {}
 
 void Factorization::Calculation()
@@ -23,7 +21,7 @@ void Factorization::Calculation()
 		factors[number]++;
 }
 
-bool Factorization::Check() const
+bool Factorization::IsRight() const
 {
 	uint64_t result = 1;
 	for (auto& obj : this->factors)
