@@ -16,31 +16,28 @@ void FileParser::Calculation()
 		while (!notified) // loop to avoid spurious wakeups
 			check.wait(lck);
 
-		if (!tasks.empty())
+		while (!tasks.empty())
 		{
-			while (!tasks.empty())
-			{
-				Factorization &curFact = tasks.front();
-				lck.unlock();
+			Factorization &curFact = tasks.front();
+			lck.unlock();
 
-				//clog << "Calculation\n";
-				curFact.Calculation();
-				if (!curFact.IsRight())
-					throw WrongAnswer("The result of multiplication of prime divisors is not equal to the original value\n");
+			//clog << "Calculation\n";
+			curFact.Calculation();
+			if (!curFact.IsRight())
+				throw WrongAnswer("The result of multiplication of prime divisors is not equal to the original value\n");
 
-				lck.lock();
-				results.push(curFact);
-				tasks.pop();
-			}
+			lck.lock();
+			results.push(curFact);
+			tasks.pop();
 		}
 		notified = 0;
+		check.notify_one();
 	}
 }
 
 void FileParser::Start()
 {
-	ifstream ifs;
-	ifs.open(inFile);
+	ifstream ifs(inFile);
 
 	if (!ifs.good())
 	{
@@ -81,10 +78,10 @@ void FileParser::WriteFile(ofstream &ofs)
 			throw IOException(outFile + " is damaged in the process of writing\n");
 		}
 
+		unique_lock<mutex> lck(mut);
+
 		while (!results.empty())
 		{
-			unique_lock<mutex> lck(mut);
-
 			//clog << "Write\n";
 			if (ofs.good())
 			{
@@ -111,10 +108,9 @@ void FileParser::ReadFile(ifstream &ifs)
 		//clog << "Read\n";
 		if (tasks.size() < minQueueSize)
 		{
-			if (!ifs.good() && tasks.empty() && results.empty())
+			if (ifs.eof() && tasks.empty() && results.empty())
 				stop = 1;
-
-			while (ifs.good() && tasks.size() < maxQueueSize)
+			else while (ifs.good() && tasks.size() < maxQueueSize)
 			{
 				uint64_t obj;
 				ifs >> obj;
