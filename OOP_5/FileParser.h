@@ -14,7 +14,7 @@ public:
 	FileParser(const std::string& in, const std::string& out);
 	~FileParser() = default;
 
-	void Work();
+	void Start();
 
 private:
 	const uint16_t minQueueSize = 2;
@@ -28,6 +28,6 @@ private:
 	std::queue<Factorization> tasks, results;
 
 	void Calculation();
-	void WriteFile();
-	void ReadFile();
+	void WriteFile(std::ofstream &ofs);
+	void ReadFile(std::ifstream &ifs);
 };

@@ -37,11 +37,29 @@ void FileParser::Calculation()
 	}
 }
 
-void FileParser::Work()
+void FileParser::Start()
 {
-	thread readFile(&FileParser::ReadFile, this);
+	ifstream ifs;
+	ifs.open(inFile);
+
+	if (!ifs.good())
+	{
+		stop = 1;
+		throw IOException("IO error in " + inFile + '\n');
+	}
+
+	ofstream ofs;
+	ofs.open(outFile);
+
+	if (!ofs.good())
+	{
+		stop = 1;
+		throw IOException("IO error in " + outFile + '\n');
+	}
+
+	thread readFile(&FileParser::ReadFile, this, std::ref(ifs));
 	thread calc(&FileParser::Calculation, this);
-	thread writeFile(&FileParser::WriteFile, this);
+	thread writeFile(&FileParser::WriteFile, this, std::ref(ofs));
 
 	if (calc.joinable()) calc.join();
 	else throw NotJoinable("The calculation thread is not joinable\n");
@@ -53,16 +71,8 @@ void FileParser::Work()
 	else throw NotJoinable("The WriteFile thread is not joinable\n");
 }
 
-void FileParser::WriteFile()
+void FileParser::WriteFile(ofstream &ofs)
 {
-	ofstream ofs(outFile);
-
-	if (!ofs.good())
-	{
-		stop = 1;
-		throw IOException("IO error in " + outFile + '\n');
-	}
-
 	while (!stop)
 	{
 		if (!ofs.good())
@@ -86,16 +96,8 @@ void FileParser::WriteFile()
 	}
 }
 
-void FileParser::ReadFile()
+void FileParser::ReadFile(ifstream &ifs)
 {
-	ifstream ifs(inFile);
-
-	if (!ifs.good())
-	{
-		stop = 1;
-		throw IOException("IO error in " + inFile + '\n');
-	}
-	
 	while (!stop)
 	{
 		if (!ifs.good() && !ifs.eof())
