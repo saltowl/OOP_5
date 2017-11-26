@@ -21,13 +21,17 @@ private:
 	const uint16_t maxQueueSize = 5;
 	const std::string inFile, outFile;
 
-	bool stop = 0;
+	std::ifstream ifs;
+	std::ofstream ofs;
+	bool stop = 0, pause = 0, resume = 0;
 	bool notified;
 	std::condition_variable check;
 	std::mutex mut;
 	std::queue<Factorization> tasks, results;
 
 	void Calculation();
-	void WriteFile(std::ofstream &ofs);
-	void ReadFile(std::ifstream &ifs);
+	void WriteFile();
+	void ReadFile();
+	void ReadConsole();
+	void Wait();
 };

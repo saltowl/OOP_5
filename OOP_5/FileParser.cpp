@@ -2,8 +2,7 @@
 
 using namespace std;
 
-// TODO: use condition_variable
-// TODO: add pause and resume
+// TODO: add condition_variable to WriteFile()
 
 FileParser::FileParser(const string& in, const string& out) : inFile(in), outFile(out) {}
 
@@ -16,12 +15,12 @@ void FileParser::Calculation()
 		while (!notified) // loop to avoid spurious wakeups
 			check.wait(lck);
 
-		while (!tasks.empty())
+		while (!tasks.empty() && !stop && !pause)
 		{
 			Factorization &curFact = tasks.front();
 			lck.unlock();
 
-			//clog << "Calculation\n";
+			//logFile << "Calculation\n";
 			curFact.Calculation();
 			if (!curFact.IsRight())
 				throw WrongAnswer("The result of multiplication of prime divisors is not equal to the original value\n");
@@ -30,6 +29,9 @@ void FileParser::Calculation()
 			results.push(curFact);
 			tasks.pop();
 		}
+
+		if (pause) Wait();
+
 		notified = 0;
 		check.notify_one();
 	}
@@ -37,26 +39,26 @@ void FileParser::Calculation()
 
 void FileParser::Start()
 {
-	ifstream ifs(inFile);
-
+	ifs.open(inFile);
 	if (!ifs.good())
 	{
 		stop = 1;
 		throw IOException("IO error in " + inFile + '\n');
 	}
 
-	ofstream ofs;
 	ofs.open(outFile);
-
 	if (!ofs.good())
 	{
 		stop = 1;
 		throw IOException("IO error in " + outFile + '\n');
 	}
 
-	thread readFile(&FileParser::ReadFile, this, std::ref(ifs));
+	thread readFile(&FileParser::ReadFile, this);
 	thread calc(&FileParser::Calculation, this);
-	thread writeFile(&FileParser::WriteFile, this, std::ref(ofs));
+	thread writeFile(&FileParser::WriteFile, this);
+
+	thread readConsole(&FileParser::ReadConsole, this);
+	readConsole.detach();
 
 	if (calc.joinable()) calc.join();
 	else throw NotJoinable("The calculation thread is not joinable\n");
@@ -68,11 +70,51 @@ void FileParser::Start()
 	else throw NotJoinable("The WriteFile thread is not joinable\n");
 }
 
-void FileParser::WriteFile(ofstream &ofs)
+void FileParser::ReadConsole()
 {
 	while (!stop)
 	{
-		if (!ofs.good())
+		string line;
+		cin >> line;
+		switch (line[0])
+		{
+		case 'e':
+			stop = 1;
+			break;
+		case 'p':
+			pause = 1;
+			break;
+		case 'r':
+			resume = 1;
+			pause = 0;
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+void FileParser::Wait()
+{
+	if (pause) ofs.close();
+
+	while (pause)
+	{
+		if (stop) break;
+	}
+
+	if (!pause && resume)
+	{
+		ofs.open(outFile, std::ofstream::app);
+		resume = 0;
+	}
+}
+
+void FileParser::WriteFile()
+{
+	while (!stop)
+	{
+		if (!ofs.good() && !pause)
 		{
 			stop = 1;
 			throw IOException(outFile + " is damaged in the process of writing\n");
@@ -80,9 +122,9 @@ void FileParser::WriteFile(ofstream &ofs)
 
 		unique_lock<mutex> lck(mut);
 
-		while (!results.empty())
+		while (!results.empty() && !pause)
 		{
-			//clog << "Write\n";
+			//logFile << "Write\n";
 			if (ofs.good())
 			{
 				ofs.write(results.front().Description().c_str(), results.front().Description().length());
@@ -90,14 +132,16 @@ void FileParser::WriteFile(ofstream &ofs)
 			}
 			else throw IOException(outFile + " is damaged in the process of writing\n");
 		}
+
+		if (pause) Wait();
 	}
 }
 
-void FileParser::ReadFile(ifstream &ifs)
+void FileParser::ReadFile()
 {
 	while (!stop)
 	{
-		if (!ifs.good() && !ifs.eof())
+		if (!ifs.good() && !ifs.eof() && !pause)
 		{
 			stop = 1;
 			throw IOException(inFile + " is damaged in the process of reading\n");
@@ -105,12 +149,12 @@ void FileParser::ReadFile(ifstream &ifs)
 
 		unique_lock<mutex> lck(mut);
 
-		//clog << "Read\n";
-		if (tasks.size() < minQueueSize)
+		//logFile << "Read\n";
+		if (tasks.size() < minQueueSize && !pause)
 		{
 			if (ifs.eof() && tasks.empty() && results.empty())
 				stop = 1;
-			else while (ifs.good() && tasks.size() < maxQueueSize)
+			else while (ifs.good() && tasks.size() < maxQueueSize && !pause)
 			{
 				uint64_t obj;
 				ifs >> obj;
@@ -120,5 +164,7 @@ void FileParser::ReadFile(ifstream &ifs)
 			notified = 1;
 			check.notify_one();
 		}
+
+		if (pause) Wait();
 	}
 }
