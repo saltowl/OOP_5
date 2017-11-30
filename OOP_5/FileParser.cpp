@@ -56,15 +56,16 @@ void FileParser::Start()
 	thread readFile(&FileParser::ReadFile, this);
 	thread calc(&FileParser::Calculation, this);
 	thread writeFile(&FileParser::WriteFile, this);
-
 	thread readConsole(&FileParser::ReadConsole, this);
-	readConsole.detach();
 
 	if (calc.joinable()) calc.join();
 	else throw NotJoinable("The calculation thread is not joinable\n");
 
 	if (readFile.joinable()) readFile.join();
 	else throw NotJoinable("The ReadFile thread is not joinable\n");
+
+	if (readConsole.joinable()) readConsole.join();
+	else throw NotJoinable("The ReadConsole thread in not joinable\n");
 
 	if (writeFile.joinable()) writeFile.join();
 	else throw NotJoinable("The WriteFile thread is not joinable\n");
@@ -132,6 +133,9 @@ void FileParser::WriteFile()
 			}
 			else throw IOException(outFile + " is damaged in the process of writing\n");
 		}
+
+		if (stop && results.empty() && tasks.empty())
+			cout << "Successfully done!\n";
 
 		if (pause) Wait();
 	}
